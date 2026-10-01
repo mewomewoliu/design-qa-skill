@@ -1,0 +1,13 @@
+{
+  "name": "design-qa-tools",
+  "owner": { "name": "Mia Liu", "email": "mia.liu@odevo.com" },
+  "metadata": { "description": "Design QA skills for product teams" },
+  "plugins": [
+    {
+      "name": "design-qa",
+      "source": "./plugins/design-qa",
+      "description": "Scenario-based UI/UX design QA with a visual HTML report saved to qa-tests/",
+      "version": "1.0.0"
+    }
+  ]
+}

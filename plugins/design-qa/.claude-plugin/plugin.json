@@ -1,0 +1,7 @@
+{
+  "name": "design-qa",
+  "version": "1.0.0",
+  "description": "Generate user scenarios from a feature's intent, test the design and demo against personas, behavior and product vision, find edge cases, and publish a visual HTML report to qa-tests/.",
+  "author": { "name": "Mia Liu", "email": "mia.liu@odevo.com" },
+  "keywords": ["design", "qa", "ux", "scenarios", "usability"]
+}

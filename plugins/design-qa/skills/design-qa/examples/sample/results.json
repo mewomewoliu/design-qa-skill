@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "feature": "Snooze a task (sample)",
+    "slug": "sample-snooze-task",
+    "option": "Option A — one-tap snooze to tomorrow",
+    "date": "2026-10-01",
+    "run": "2026-10-01",
+    "surface": "mobile",
+    "roles": [
+      "Field technician",
+      "Supervisor"
+    ],
+    "author": "Design QA sample — fictional product 'Fieldbook', for illustrating the report format only",
+    "boundary": "Snooze from the task list and task detail, offline, Spanish. Excludes desktop and recurring tasks. Everything in this sample is invented to show the format.",
+    "reviewed": [
+      {
+        "label": "design-solution.md §2–4",
+        "ref": "design/snooze-task/design-solution.md"
+      },
+      {
+        "label": "Demo option A",
+        "ref": "demo/snooze-task",
+        "note": "local fixtures"
+      }
+    ],
+    "demo": {
+      "url": "http://localhost:8080",
+      "build": "local",
+      "method": "executed in Chromium 390×640"
+    }
+  },
+  "verdict": {
+    "core_job": "partial",
+    "headline": "Snoozing works online, but offline snoozes look confirmed when they are only queued, and supervisors can't see why work moved.",
+    "summary": "The one-tap path is fast and clear in both themes. Two P1 gaps: offline confirmation overstates what happened, and the supervisor's view loses the reason for a snooze. Decide the reason rule before build.",
+    "user_value": "plausible",
+    "user_value_note": "Technicians report deferring work they can't finish (E01), but no analytics show how often (E03). Validate with a measurement of snooze → completion within 48 h."
+  },
+  "intent": {
+    "source": "plan/snooze-task/intent.md",
+    "status": "captured",
+    "problem": "Technicians can't finish some tasks on the day (no parts, no access) and the task stays overdue, hiding real problems.",
+    "users": "Field technicians (primary); supervisors who plan the next day (secondary).",
+    "job": "Move a task I can't do today to a sensible later time, without losing why.",
+    "success": [
+      "Task moves to the chosen time and leaves today's overdue list",
+      "Supervisor can see that it was snoozed and why"
+    ],
+    "out_of_scope": [
+      "Recurring task rules",
+      "Desktop planning view"
+    ],
+    "outcome_chain": "Can't finish on site → snooze with a reason → task reappears when it can be done → supervisor plans around it → fewer stale overdue tasks"
+  },
+  "evidence": [
+    {
+      "id": "E01",
+      "type": "persona",
+      "claim": "Technicians often lack parts or access and defer work informally",
+      "source": "research/personas/technician.md §Pain points",
+      "date": "2026-06-10",
+      "limits": "Persona synthesis, 8 interviews"
+    },
+    {
+      "id": "E02",
+      "type": "persona",
+      "claim": "Supervisors plan the next day from overdue and snoozed work",
+      "source": "research/personas/supervisor.md §Day plan",
+      "date": "2026-06-10",
+      "limits": "Same study"
+    },
+    {
+      "id": "E03",
+      "type": "analytics",
+      "claim": "No event exists yet for deferral; overdue count is the only proxy",
+      "source": "Analytics saved insight 'Overdue tasks per day'",
+      "date": "2026-09-30",
+      "limits": "Proxy only; cannot show intent"
+    },
+    {
+      "id": "E04",
+      "type": "research",
+      "claim": "Basements and plant rooms frequently have no signal",
+      "source": "research/field-visits.md §Connectivity",
+      "date": "2026-05-02",
+      "limits": "3 sites"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "S01",
+      "title": "Snooze a task to tomorrow when a part is missing",
+      "kind": "core",
+      "role": "Field technician",
+      "surface": "mobile",
+      "trigger": "On site, the replacement filter hasn't arrived",
+      "goal": "Get the task off today's list and back tomorrow morning",
+      "importance": "major",
+      "evidence": [
+        "E01"
+      ],
+      "preconditions": [
+        "Online",
+        "Task due today"
+      ],
+      "steps": [
+        "Open task list",
+        "Long-press task → Snooze",
+        "Pick 'Tomorrow 08:00'",
+        "See confirmation and the task leave today's list"
+      ],
+      "success": [
+        "Task shows new time",
+        "Task leaves today's list",
+        "Undo available for a few seconds"
+      ],
+      "design": {
+        "result": "pass",
+        "note": "§2 covers presets, confirmation and undo.",
+        "ref": "design-solution.md §2"
+      },
+      "demo": {
+        "result": "pass",
+        "method": "executed",
+        "note": "All three conditions observed."
+      },
+      "findings": []
+    },
+    {
+      "id": "S02",
+      "title": "Snooze in a basement with no signal",
+      "kind": "edge",
+      "lens": "Connectivity",
+      "role": "Field technician",
+      "surface": "mobile",
+      "trigger": "Plant room with no signal",
+      "goal": "Snooze now and trust it will stick",
+      "importance": "critical",
+      "assumption": true,
+      "evidence": [
+        "E04"
+      ],
+      "preconditions": [
+        "Offline",
+        "Task due today"
+      ],
+      "steps": [
+        "Snooze to tomorrow while offline",
+        "Read the confirmation",
+        "Leave without reconnecting"
+      ],
+      "success": [
+        "User can tell the snooze is saved on the phone but not yet sent",
+        "Queued state stays visible until synced"
+      ],
+      "design": {
+        "result": "unknown",
+        "note": "Spec is silent on offline snooze."
+      },
+      "demo": {
+        "result": "fail",
+        "method": "executed",
+        "note": "Toast says 'Task snoozed ✓' and the list shows the new time; nothing indicates it isn't synced."
+      },
+      "findings": [
+        "F01"
+      ],
+      "visuals": [
+        {
+          "src": "evidence/s02-offline-snooze.png",
+          "kind": "actual",
+          "caption": "Offline: snooze looks fully confirmed",
+          "annotations": [
+            {
+              "x": 3,
+              "y": 92,
+              "w": 94,
+              "h": 7,
+              "label": "Toast claims success; no queued state"
+            },
+            {
+              "x": 3,
+              "y": 9,
+              "w": 94,
+              "h": 13,
+              "label": "No offline or pending marker on the task"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "title": "Supervisor plans tomorrow and sees why work moved",
+      "kind": "alternate",
+      "role": "Supervisor",
+      "surface": "mobile",
+      "trigger": "End of day, planning tomorrow's assignments",
+      "goal": "Know which tasks were snoozed and why",
+      "importance": "major",
+      "evidence": [
+        "E02"
+      ],
+      "preconditions": [
+        "Three tasks snoozed today by two technicians"
+      ],
+      "steps": [
+        "Open team view",
+        "Filter 'Snoozed today'",
+        "Open one task"
+      ],
+      "success": [
+        "Snoozed tasks are identifiable",
+        "The reason is visible"
+      ],
+      "design": {
+        "result": "partial",
+        "note": "Snoozed badge specified; reason capture is optional and not shown to supervisors.",
+        "ref": "design-solution.md §3"
+      },
+      "demo": {
+        "result": "partial",
+        "method": "executed",
+        "note": "Badge visible; no reason field anywhere."
+      },
+      "findings": [
+        "F02"
+      ],
+      "visuals": [
+        {
+          "kind": "spec",
+          "excerpt": "Reason is optional and kept on the technician's device for their own reference.",
+          "ref": "design-solution.md §3.2"
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "title": "Accidental snooze on the wrong task",
+      "kind": "edge",
+      "lens": "Undo & mistakes",
+      "role": "Field technician",
+      "surface": "mobile",
+      "trigger": "Long-press lands on the neighbouring task",
+      "goal": "Reverse it immediately",
+      "importance": "major",
+      "evidence": [
+        "E01"
+      ],
+      "steps": [
+        "Snooze the wrong task",
+        "Tap Undo in the toast"
+      ],
+      "success": [
+        "Task returns to its original time and position"
+      ],
+      "design": {
+        "result": "pass",
+        "note": "Undo specified for 5 s.",
+        "ref": "design-solution.md §2.3"
+      },
+      "demo": {
+        "result": "pass",
+        "method": "executed",
+        "note": "Undo restored the task."
+      },
+      "findings": []
+    },
+    {
+      "id": "S05",
+      "title": "Spanish-language technician snoozes from detail",
+      "kind": "edge",
+      "lens": "Language",
+      "role": "Field technician",
+      "surface": "mobile",
+      "trigger": "App set to Spanish",
+      "goal": "Understand the snooze options",
+      "importance": "minor",
+      "evidence": [],
+      "steps": [
+        "Open task detail in Spanish",
+        "Read the snooze button"
+      ],
+      "success": [
+        "Full label is readable without truncation"
+      ],
+      "design": {
+        "result": "unknown",
+        "note": "No string-expansion guidance in the spec."
+      },
+      "demo": {
+        "result": "fail",
+        "method": "executed",
+        "note": "Button truncates to 'Posponer hasta mañ…'."
+      },
+      "findings": [
+        "F03"
+      ],
+      "visuals": [
+        {
+          "src": "evidence/s05-spanish-button.png",
+          "kind": "actual",
+          "caption": "Spanish label truncates",
+          "annotations": [
+            {
+              "x": 3,
+              "y": 17,
+              "w": 42,
+              "h": 9,
+              "label": "Label cut off"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "S06",
+      "title": "Snoozing works, yet overdue problems still hide",
+      "kind": "counterexample",
+      "lens": "Trust & value",
+      "role": "Supervisor",
+      "surface": "mobile",
+      "trigger": "A technician snoozes the same task every day for a week",
+      "goal": "Notice a task that keeps slipping",
+      "importance": "major",
+      "assumption": true,
+      "evidence": [
+        "E02",
+        "E03"
+      ],
+      "steps": [
+        "Task snoozed 5 days in a row",
+        "Supervisor reviews the team view"
+      ],
+      "success": [
+        "Repeated snoozes are visible as a pattern"
+      ],
+      "design": {
+        "result": "fail",
+        "note": "Each snooze replaces the previous time; no history or count.",
+        "ref": "design-solution.md §3.1"
+      },
+      "demo": {
+        "result": "unknown",
+        "method": "not-run",
+        "note": "Fixtures cannot simulate multiple days."
+      },
+      "findings": [
+        "F02"
+      ],
+      "visuals": [
+        {
+          "kind": "spec",
+          "excerpt": "Snoozing sets a new due time. The previous due time is replaced.",
+          "ref": "design-solution.md §3.1"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "title": "Offline snoozes look confirmed when they're only queued",
+      "priority": "P1",
+      "category": "design_gap",
+      "scenarios": [
+        "S02"
+      ],
+      "expected": "A clear 'saved on phone, will send when online' state that persists until sync.",
+      "actual": "Same success toast and list state as online; spec doesn't mention offline.",
+      "why": "Technician leaves believing the supervisor sees it; supervisor plans around stale data. Frequency unknown, but no-signal rooms are common (E04).",
+      "confidence": "observed",
+      "action": {
+        "type": "fix",
+        "recommendation": "Add an offline variant of the toast and a pending marker on the task until sync; reuse the app's existing offline banner."
+      },
+      "retest": "S02: snooze offline → see pending marker → reconnect → marker clears and supervisor view updates."
+    },
+    {
+      "id": "F02",
+      "title": "Supervisors lose the reason and history of snoozes",
+      "priority": "P1",
+      "category": "design_gap",
+      "scenarios": [
+        "S03",
+        "S06"
+      ],
+      "expected": "Supervisors can see why a task moved and whether it keeps moving.",
+      "actual": "Reason is optional and device-local; each snooze overwrites the last.",
+      "why": "Snooze can hide exactly the stale work the feature was meant to surface (intent: problem).",
+      "confidence": "static",
+      "action": {
+        "type": "decision",
+        "recommendation": "Decide how much reason capture to require before build. Recommend B if supervisors confirm they plan from reasons.",
+        "options": [
+          {
+            "label": "A — Optional free-text reason, shared",
+            "tradeoff": "Lowest friction; reasons often blank."
+          },
+          {
+            "label": "B — Required quick reason chips (No parts / No access / Other)",
+            "tradeoff": "One extra tap; structured, reportable."
+          },
+          {
+            "label": "C — No reason; show snooze count and history only",
+            "tradeoff": "Zero friction; supervisor sees pattern but not cause."
+          }
+        ]
+      },
+      "retest": "S03 and S06 with the chosen option."
+    },
+    {
+      "id": "F03",
+      "title": "Spanish snooze label truncates",
+      "priority": "P3",
+      "category": "design_gap",
+      "scenarios": [
+        "S05"
+      ],
+      "expected": "Full label readable, or a shorter translation.",
+      "actual": "Fixed-width button cuts the label.",
+      "why": "Minor, but hides which time is being chosen.",
+      "confidence": "observed",
+      "action": {
+        "type": "fix",
+        "recommendation": "Let the button wrap to two lines or use the shorter string 'Posponer a mañana'."
+      },
+      "retest": "S05 in Spanish at default and large text size."
+    }
+  ],
+  "coverage": {
+    "requirements": [
+      {
+        "item": "Task moves and leaves today's list",
+        "scenarios": [
+          "S01",
+          "S04"
+        ],
+        "status": "covered",
+        "gap": ""
+      },
+      {
+        "item": "Supervisor sees it was snoozed and why",
+        "scenarios": [
+          "S03",
+          "S06"
+        ],
+        "status": "gap",
+        "gap": "Reason and history missing (F02)"
+      }
+    ],
+    "constraints": [
+      {
+        "item": "Works offline",
+        "scenarios": [
+          "S02"
+        ],
+        "status": "gap",
+        "gap": "F01"
+      },
+      {
+        "item": "Both themes",
+        "scenarios": [
+          "S01"
+        ],
+        "status": "covered",
+        "gap": ""
+      }
+    ],
+    "untested": [
+      "Concurrency — two technicians snoozing the same task: no multi-user fixtures",
+      "Screen reader: needs device test"
+    ]
+  },
+  "open_questions": [
+    {
+      "question": "**[open]** Must a reason be required?",
+      "scenarios": [
+        "S03",
+        "S06"
+      ],
+      "resolves": "Supervisor interviews or product owner decision",
+      "next": "Ask 3 supervisors how they plan the next day"
+    }
+  ],
+  "next_actions": [
+    {
+      "priority": "P1",
+      "action": "Specify offline snooze state and pending marker",
+      "owner": "design",
+      "finding": "F01"
+    },
+    {
+      "priority": "P1",
+      "action": "Decide reason rule (A/B/C)",
+      "owner": "product",
+      "finding": "F02"
+    },
+    {
+      "priority": "P3",
+      "action": "Fix Spanish label",
+      "owner": "engineering",
+      "finding": "F03"
+    }
+  ]
+}
