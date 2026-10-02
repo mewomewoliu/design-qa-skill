@@ -170,6 +170,23 @@ a conditional recommendation. Settled requirements need a direct fix, not artifi
 Judge **user value** separately from design adequacy: *supported by evidence*, *plausible but
 unvalidated*, or *challenged by evidence* — with the citation and the next validation step.
 
+### Write it short
+
+The report leads with visuals and short lines. Longer reasoning sits behind "Full summary",
+"Why it matters & retest" and the expanded scenario rows. Write for a reader who scans:
+
+- **Headline:** one sentence of ≤ 140 characters, in the form "what works, but what fails".
+- **`verdict.key_points`:** 3–4 bullets of ≤ 110 characters each. End a bullet with the finding
+  ID in brackets, e.g. `"No retry after a failed save (F03)"`, and the renderer links it.
+- **Finding title:** the user's problem in ≤ 90 characters. **Expected** and **actual:** one or
+  two sentences each, ≤ 180 characters. **Recommendation:** ≤ 220 characters. Put the detail
+  in `why` and `retest`.
+- **Scenario title:** ≤ 70 characters. Notes can be longer, but start them with the result.
+- Use plain words. Cut filler ("it is worth noting", "in order to") and words that repeat the
+  label beside them.
+
+The renderer warns when a field is over its limit. Shorten the text; don't ignore the warning.
+
 ### Write the output
 
 Save each run to its own folder:

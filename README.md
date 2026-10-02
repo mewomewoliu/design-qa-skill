@@ -7,9 +7,11 @@ It:
    asks you for it.
 2. **Tests the design and any runnable demo** against personas, user behavior and product
    vision, and hunts for edge cases.
-3. **Writes a visual HTML report.** The report covers the verdict, a results matrix, failed
-   scenarios with annotated screenshots, why they fail, recommended actions and retests. It's
-   saved under `qa-tests/` in the repo.
+3. **Writes a visual HTML report.** A left menu leads to each section: an overview (verdict,
+   key points, counts and a map of every scenario), failed findings with annotated screenshots
+   and the recommended action (each with a "Copy for Claude Code" button that copies the issue
+   as a ready-to-paste prompt), next actions, scenario results, coverage, intent and open
+   questions. It's saved under `qa-tests/` in the repo.
 
 Open [the sample report](plugins/design-qa/skills/design-qa/examples/sample/report.html) to see
 the output.
@@ -72,5 +74,5 @@ has one installed. Otherwise Claude uses whatever browser tool is available.
 | `references/profile-template.md` | Template for a repo's `qa-tests/qa-profile.md` |
 | `scripts/render-report.mjs` | results.json → report.html + qa-tests/index.html |
 | `scripts/capture.mjs` | Simple screenshot helper |
-| `assets/` | Report CSS/JS (light + dark, phone-friendly) |
+| `assets/` | Report CSS/JS (light gray by default, dark toggle, phone-friendly) and the embedded Barlow Condensed display font (OFL) |
 | `examples/sample/` | A fictional worked example |

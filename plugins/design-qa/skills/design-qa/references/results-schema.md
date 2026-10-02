@@ -29,7 +29,11 @@ rendered; nothing else is. Paths in `visuals[].src` are relative to `results.jso
 
   "verdict": {
     "core_job": "partial",                    // supported | partial | not_supported | unknown
-    "headline": "One sentence a developer can repeat.",
+    "headline": "One sentence a developer can repeat (≤ 140 chars).",
+    "key_points": [                           // 3–4 bullets, ≤ 110 chars; "(F01)" becomes a link
+      "Six clicks for one association, framed as a contract term",
+      "Nothing shows which associations still need recording (F01)"
+    ],
     "summary": "2–4 sentences: what works, the biggest risks, what to do first.",
     "user_value": "plausible",                // supported | plausible | challenged
     "user_value_note": "Why, with evidence IDs, and the next validation step."
@@ -137,6 +141,10 @@ Errors (report is still written, but fix them):
 - A visual file that can't be found.
 
 Warnings:
+
+- Copy over its length limit: headline 140, key point 110, scenario title 70, finding title 90,
+  expected/actual 180, recommendation 220 characters. A missing `verdict.key_points` (the
+  overview then shows the top three finding titles instead).
 
 - A `fail`/`partial` scenario with no finding, or a finding with no scenario.
 - A failed scenario without any visual.
