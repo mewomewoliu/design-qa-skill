@@ -50,7 +50,8 @@ code { font: 12px/1.4 var(--mono); background: var(--soft); padding: 1px 5px; bo
 .side-foot { margin-top: auto; display: grid; gap: 8px; padding: 0 10px; }
 .side-foot .theme { display: inline-flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 13px; color: var(--ink); }
 .side-foot small { font: 11px/1.6 var(--mono); color: var(--muted); }
-.main { padding: 32px 40px 64px; min-width: 0; max-width: 1180px; width: 100%; }
+/* Fills the space beside the nav at any width; prose keeps its own ch caps, so lines stay readable. */
+.main { padding: 32px clamp(24px, 3vw, 64px) 64px; min-width: 0; width: 100%; }
 
 /* ---------- type & sections ---------- */
 section { margin-top: 56px; }
@@ -108,6 +109,7 @@ details > summary::-webkit-details-marker { display: none; }
 .tile .t-label { font: 11px/1.5 var(--mono); }
 .tile .t-num { font: 600 54px/1 var(--display); letter-spacing: -.02em; margin-top: auto; }
 .tile .t-sub { font-size: 12px; margin-top: 4px; }
+.glance { margin-top: 12px; }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; margin-top: 12px; }
 .bars { display: grid; gap: 18px; align-content: start; }
 .bar-row .bar-h { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
@@ -134,7 +136,8 @@ details > summary::-webkit-details-marker { display: none; }
 .map-key { display: flex; justify-content: space-between; margin-top: 12px; font-size: 11.5px; color: var(--muted); gap: 8px; flex-wrap: wrap; }
 
 /* ---------- findings ---------- */
-.finding { background: var(--surface); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 24px; scroll-margin-top: 20px; }
+.finding { background: var(--surface); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr); gap: 24px; scroll-margin-top: 20px; }
+/* Evidence grows with the card on wide screens (≥340px), so screenshots stay legible beside the text. */
 .finding.no-vis { grid-template-columns: minmax(0, 1fr); }
 .f-head { display: flex; gap: 10px; align-items: flex-start; }
 .f-head h3 { font-size: 17px; text-wrap: pretty; flex: 1; min-width: 0; }
@@ -288,7 +291,7 @@ tr:last-child td { border-bottom: 0; }
 .lightbox .close { position: fixed; top: 14px; right: 18px; width: 40px; height: 40px; border-radius: 50%; font-size: 22px; background: #fff; color: #000; }
 
 /* ---------- index page ---------- */
-.index-main { max-width: 1080px; margin: 0 auto; padding: 40px 24px 64px; }
+.index-main { width: 100%; padding: 40px clamp(16px, 3vw, 64px) 64px; }
 .index-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
 .index-top h1 { font: 600 52px/1.02 var(--display); letter-spacing: -.025em; margin-top: 6px; }
 .index-top p { color: var(--muted); margin-top: 8px; }

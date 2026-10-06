@@ -45,7 +45,11 @@ Last checked: <YYYY-MM-DD>
 ## Known traps
 - <stale indexes, missing folders, demo limitations that look like bugs>
 
-## Output conventions
-- Feature slug: <how to name `qa-tests/<feature-slug>/`>
+## Output
+- Location: <default `qa-tests/<feature-slug>/<YYYY-MM-DD>[-label]/`, one folder per run — or a
+  latest-only location such as `design/<feature-slug>/qa/`, where each run replaces the last>
+- Feature slug: <how features are named, e.g. the `plan/` folder name>
+- Superseded copies to remove: <latest-only only: older run folders or report files>
+- Rebuild after rendering: <e.g. a workspace page that lists reports, or none>
 - Sharing: <publish as Artifact / attach to ticket / etc.>
 ```

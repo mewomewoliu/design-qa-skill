@@ -12,7 +12,7 @@ rendered; nothing else is. Paths in `visuals[].src` are relative to `results.jso
 {
   "meta": {
     "feature": "Pause a work order",          // human name
-    "slug": "01-pause-work-order",            // folder name under qa-tests/
+    "slug": "01-pause-work-order",            // the feature folder name
     "option": "Option C — camera first",      // design option / revision under test
     "date": "2026-10-01",
     "run": "2026-10-01",                      // folder name of this run (date[-label])
@@ -24,7 +24,7 @@ rendered; nothing else is. Paths in `visuals[].src` are relative to `results.jso
       { "label": "design-solution.md §3–5", "ref": "design/01-…/design-solution.md", "note": "dirty tree" }
     ],
     "demo": { "url": "http://localhost:8084", "build": "…", "method": "executed in Chromium 390×844" },
-    "previous_run": "2026-09-29"              // optional; enables the "change" column
+    "previous_run": "2026-09-29"              // optional run label of the last report; enables the "change" column
   },
 
   "verdict": {

@@ -1,6 +1,6 @@
 ---
 name: design-qa
-description: Scenario-based UI/UX design QA for one feature, in any repository. Derives user scenarios from the feature's intent, tests the design specs and any interactive demo against personas, user behavior and product vision, hunts edge cases, and publishes a visual HTML report of passed and failed scenarios, why they failed and what to do next, saved under qa-tests/. Use for design QA, scenario testing, UX review, edge-case review or "will this feature work for our users" questions, before or alongside implementation.
+description: Scenario-based UI/UX design QA for one feature, in any repository. Derives user scenarios from the feature's intent, tests the design specs and any interactive demo against personas, user behavior and product vision, hunts edge cases, and publishes a visual HTML report of passed and failed scenarios, why they failed and what to do next, saved where the repo profile says (qa-tests/ by default). Use for design QA, scenario testing, UX review, edge-case review or "will this feature work for our users" questions, before or alongside implementation.
 ---
 
 # Design QA
@@ -170,29 +170,43 @@ a conditional recommendation. Settled requirements need a direct fix, not artifi
 Judge **user value** separately from design adequacy: *supported by evidence*, *plausible but
 unvalidated*, or *challenged by evidence* — with the citation and the next validation step.
 
-### Write it short
+### Write it short, plain and once
 
-The report leads with visuals and short lines. Longer reasoning sits behind "Full summary",
-"Why it matters & retest" and the expanded scenario rows. Write for a reader who scans:
+The report is read by designers, PMs and engineers who scan. Write so anyone gets it on one
+read:
 
+- **Plain words.** Say what the user sees and does ("The Spanish sentence is cut off"), not
+  QA jargon ("Demo/spec mismatch in L1 expansion"). Name screens and buttons as they appear.
+  Cut filler ("it is worth noting", "in order to") and words that repeat the label beside them.
+- **Say each thing once.** The headline gives the verdict; the key points give the 3–4 most
+  important problems; each problem card holds its detail. Don't restate the headline in the
+  key points, a key point in the summary, or a problem's fix in another section.
+- **`next_actions` only for work no problem already covers.** A problem's fix *is* its action:
+  set the owner on that problem with a `next_actions` entry that links it (`finding`), and the
+  report shows the owner on the card instead of repeating the fix. Unlinked actions get their
+  own short "Other to-dos" list.
 - **Headline:** one sentence of ≤ 140 characters, in the form "what works, but what fails".
 - **`verdict.key_points`:** 3–4 bullets of ≤ 110 characters each. End a bullet with the finding
   ID in brackets, e.g. `"No retry after a failed save (F03)"`, and the renderer links it.
-- **Finding title:** the user's problem in ≤ 90 characters. **Expected** and **actual:** one or
-  two sentences each, ≤ 180 characters. **Recommendation:** ≤ 220 characters. Put the detail
-  in `why` and `retest`.
-- **Scenario title:** ≤ 70 characters. Notes can be longer, but start them with the result.
-- Use plain words. Cut filler ("it is worth noting", "in order to") and words that repeat the
-  label beside them.
+- **Problem (finding) title:** the user's problem in ≤ 90 characters. **Expected** and
+  **actual:** one sentence each, ≤ 180 characters. **Recommendation:** one instruction,
+  ≤ 220 characters. Put reasoning in `why` and the check in `retest`, both one or two sentences.
+- **Test (scenario) title:** ≤ 70 characters, phrased as what the person does. Notes start with
+  the result.
+- **Summary** (`verdict.summary`) is optional, sits behind "More detail", and adds only what
+  the headline and problems don't already say.
 
 The renderer warns when a field is over its limit. Shorten the text; don't ignore the warning.
+Each problem card has a **Copy prompt** button: a ready-to-paste prompt that fixes that one
+problem, built from the card — so the card itself must be complete and specific.
 
 ### Write the output
 
-Save each run to its own folder:
+**Where:** the repo profile's **Output** section decides. Follow it exactly. If the profile has
+none, use the default layout below.
 
 ```
-qa-tests/
+qa-tests/                           default layout (no Output section in the profile)
   qa-profile.md                     repo profile (create if missing)
   README.md                         folder conventions (create if missing)
   index.html                        all runs, rebuilt by the renderer
@@ -202,20 +216,37 @@ qa-tests/
     evidence/                       screenshots and capture notes
 ```
 
-Use the feature slug the repo already uses (e.g. the `plan/` folder name). Add a `-label` for a
-second run or option on the same day; never overwrite an earlier run.
+Use the feature slug the repo already uses (e.g. the `plan/` folder name). In the default
+layout, add a `-label` for a second run on the same day and never overwrite an earlier run.
+
+**Latest-only profiles.** A profile can say a feature keeps only its newest report (for
+example `design/<feature-slug>/qa/`). Then:
+
+1. Before testing, read the existing `results.json` there, if any. It is the previous run:
+   reuse its scenario IDs and success criteria, and set `meta.previous_run` to its
+   `meta.run` (a label, not a path — the folder is about to be replaced).
+2. Build the new run in a temporary folder, render it, and check it.
+3. Only then replace the feature's report folder with it: `results.json`, `report.html` and
+   `evidence/` — delete the old evidence so no stale screenshots remain.
+4. Remove any other copy of this feature's QA report the profile names as superseded (older
+   run folders, older `qa-*.md` reports). One feature, one current report, nowhere duplicated.
+5. Render with `--no-index`; the repo's own pages list the reports.
+
+Then, in either layout:
 
 1. Write `results.json` following [references/results-schema.md](references/results-schema.md).
 2. Render it:
-   `node <this skill>/scripts/render-report.mjs qa-tests/<feature>/<run>/results.json`
+   `node <this skill>/scripts/render-report.mjs <run folder>/results.json [--no-index]`
    This validates the data (unknown IDs, bad enums, missing visuals on failures), embeds the
-   screenshots, writes `report.html` beside it and rebuilds `qa-tests/index.html`. Fix every
-   validation error it prints; warnings are worth a look.
+   screenshots and writes `report.html` beside it (in the default layout it also rebuilds
+   `qa-tests/index.html`). Fix every validation error it prints; warnings are worth a look.
 3. Open the report and check it visually — both light and dark mode, and at phone width.
-4. **Share:** if an Artifact/publishing tool is available, offer to publish `report.html` so the
+4. Run any rebuild step the profile lists (e.g. a workspace page that lists reports).
+5. **Share:** if an Artifact/publishing tool is available, offer to publish `report.html` so the
    team gets a link (it's self-contained, so it publishes as one file). Otherwise give the path.
 
-If `qa-tests/README.md` doesn't exist, create it from the folder layout above.
+If the default layout is used and `qa-tests/README.md` doesn't exist, create it from the layout
+above.
 
 ### Reply in chat
 

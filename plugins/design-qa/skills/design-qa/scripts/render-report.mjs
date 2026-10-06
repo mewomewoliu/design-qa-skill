@@ -28,17 +28,17 @@ const js = fs.readFileSync(path.join(here, '../assets/report.js'), 'utf8');
 const RESULTS = ['pass', 'partial', 'fail', 'unknown', 'na'];
 const RESULT_LABEL = { pass: 'Pass', partial: 'Partial', fail: 'Fail', unknown: 'Unknown', na: 'N/A' };
 const KINDS = ['core', 'alternate', 'edge', 'counterexample'];
-const KIND_LABEL = { core: 'Core', alternate: 'Alternate', edge: 'Edge case', counterexample: 'Counterexample' };
+const KIND_LABEL = { core: 'Main', alternate: 'Other path', edge: 'Edge case', counterexample: 'Counter-case' };
 const IMPORTANCE = ['critical', 'major', 'minor'];
 const PRIORITIES = ['P1', 'P2', 'P3'];
-const PRIORITY_LABEL = { P1: 'Fix before build', P2: 'Fix before release', P3: 'Later / polish' };
-const CATEGORIES = { design_gap: 'Design gap', mismatch: 'Demo/spec mismatch', demo_limitation: 'Demo limitation', evidence_gap: 'Evidence gap', new_ask: 'New implementation ask' };
-const ACTIONS = { fix: 'Fix', decision: 'Decision needed', research: 'Research', dependency: 'Dependency' };
-const CONFIDENCE = { observed: 'Observed in demo', static: 'Static evidence', hypothesis: 'Hypothesis' };
+const PRIORITY_LABEL = { P1: 'Fix before build', P2: 'Fix before release', P3: 'Later' };
+const CATEGORIES = { design_gap: 'Design gap', mismatch: 'Demo differs from spec', demo_limitation: 'Demo limit', evidence_gap: 'Needs evidence', new_ask: 'New build ask' };
+const ACTIONS = { fix: 'Fix', decision: 'Decide', research: 'Find out', dependency: 'Blocked by' };
+const CONFIDENCE = { observed: 'Seen in demo', static: 'From documents', hypothesis: 'Unproven' };
 const METHODS = { executed: 'Executed', 'source-only': 'Source only', 'not-run': 'Not run' };
 const CHANGES = ['new', 'fixed', 'regressed', 'unchanged', 'unverified'];
-const CORE_JOB = { supported: 'Core job supported', partial: 'Core job partly supported', not_supported: 'Core job not supported', unknown: 'Core job unverified' };
-const VALUE = { supported: 'Value supported by evidence', plausible: 'Value plausible, unvalidated', challenged: 'Value challenged by evidence' };
+const CORE_JOB = { supported: 'Main task works', partial: 'Main task partly works', not_supported: 'Main task fails', unknown: 'Main task not verified' };
+const VALUE = { supported: 'Value backed by evidence', plausible: 'Value likely, not proven', challenged: 'Value in doubt' };
 const COVER = ['covered', 'partial', 'gap', 'na'];
 
 // ---------- validation ----------
@@ -185,9 +185,6 @@ function counts(layer) {
 }
 const segs = (c, keys = RESULTS, cls = 'm') => keys.filter((r) => c[r]).map((r) => `<span class="seg ${cls}-${r}" style="flex:${c[r]}" title="${esc((RESULT_LABEL[r] || COVER_LABEL[r]))}: ${c[r]}"></span>`).join('');
 const legendRow = (c, keys, labels, cls = 'm') => `<div class="legend-row">${keys.filter((r) => c[r]).map((r) => `<span><i class="dot ${cls}-${r}"></i>${esc(labels[r])} <b>${c[r]}</b></span>`).join('')}</div>`;
-function barRow(c, label) {
-  return `<div class="bar-row"><div class="bar-h">${esc(label)}<span>${c.pass}/${scenarios.length} pass</span></div><div class="bar" role="img" aria-label="${esc(label)}: ${RESULTS.filter((r) => c[r]).map((r) => `${c[r]} ${RESULT_LABEL[r]}`).join(', ')}">${segs(c)}</div>${legendRow(c, RESULTS, RESULT_LABEL)}</div>`;
-}
 
 // ---------- data ----------
 const m = data.meta || {};
@@ -201,33 +198,34 @@ const sortedFindings = PRIORITIES.flatMap((p) => findings.filter((f) => f.priori
 const owners = { design: 'Design', engineering: 'Engineering', product: 'Product', research: 'Research', client: 'Client' };
 const it = data.intent || {};
 const cov = data.coverage || {};
-const nextActions = data.next_actions || [];
+const allActions = data.next_actions || [];
+// An action tied to a finding repeats that finding's fix, so it shows as an owner tag on the finding.
+const ownerOf = Object.fromEntries(allActions.filter((a) => a.finding && a.owner).map((a) => [a.finding, a.owner]));
+const nextActions = allActions.filter((a) => !a.finding || !fIds.has(a.finding));
 const openQs = data.open_questions || [];
 
 // ---------- sidebar ----------
 const NAV = [
   ['overview', 'Overview', 'home', null],
-  ['failed', 'What failed', 'alert', findings.length, findings.some((f) => f.priority === 'P1')],
-  ['actions', 'Next actions', 'todo', nextActions.length],
-  ['scenarios', 'Scenarios', 'list', scenarios.length],
-  ['coverage', 'Coverage', 'grid', null],
-  ['intent', 'Intent', 'target', null],
+  ['failed', 'Problems', 'alert', findings.length, findings.some((f) => f.priority === 'P1')],
+  ...(nextActions.length ? [['actions', 'Other to-dos', 'todo', nextActions.length]] : []),
+  ['scenarios', 'Tests', 'list', scenarios.length],
+  ['coverage', 'What was checked', 'grid', null],
+  ['intent', 'Goal', 'target', null],
   ['open', 'Open questions', 'help', openQs.length],
-  ['run', 'Run details', 'info', null],
+  ['run', 'About this test', 'info', null],
 ];
 const sidebar = `
 <aside class="side" aria-label="Report navigation">
   <div class="brand">
     <div class="eyebrow">Design QA · ${esc(m.date || '')}</div>
     <div class="name">${esc(m.feature || 'Untitled feature')}</div>
-    <span class="verdict-mini cj cj-${esc(v.core_job || 'unknown')}">${esc(CORE_JOB[v.core_job] || CORE_JOB.unknown)}</span>
   </div>
   <nav class="nav" aria-label="Sections">
     ${NAV.map(([id, label, ic, n, bad]) => `<a href="#${id}" aria-current="${id === 'overview'}">${icon(ic)}<span>${label}</span>${n != null ? `<span class="count${bad ? ' bad' : ''}">${n}</span>` : ''}</a>`).join('')}
   </nav>
   <div class="side-foot">
     <button class="theme" type="button" aria-pressed="false" aria-label="Dark theme">${icon('moon')}<span>Dark theme</span></button>
-    <small>${esc(m.run || m.date || '')}</small>
   </div>
 </aside>`;
 
@@ -244,7 +242,7 @@ const cell = (s) => {
 const overview = `
 <section id="overview">
   <div class="hero">
-    <div class="eyebrow">Design QA · ${esc(m.date || '')}${m.run && m.run !== m.date ? ` · ${esc(m.run)}` : ''}</div>
+    <div class="eyebrow">Design QA · ${esc(m.date || '')}</div>
     <h1${String(m.feature || '').length > 42 ? ' class="long"' : ''}>${esc(m.feature || 'Untitled feature')}</h1>
     <div class="tags">${m.option ? `<span class="tag">${md(m.option)}</span>` : ''}${m.surface ? `<span class="tag">${esc(m.surface)}</span>` : ''}${(m.roles || []).map((r) => `<span class="tag">${esc(r)}</span>`).join('')}</div>
   </div>
@@ -252,21 +250,18 @@ const overview = `
     <div class="badges"><span class="cj cj-${esc(v.core_job || 'unknown')}">${esc(CORE_JOB[v.core_job] || CORE_JOB.unknown)}</span>${v.user_value ? `<span class="cj val val-${esc(v.user_value)}">${esc(VALUE[v.user_value])}</span>` : ''}</div>
     <p class="headline">${md(v.headline || '')}</p>
     ${points ? `<ul class="points">${points}</ul>` : ''}
-    ${v.summary || v.user_value_note ? `<details class="more"><summary>${icon('chevron')}Full summary</summary><div class="more-body">${v.summary ? `<p>${md(v.summary)}</p>` : ''}${v.user_value_note ? `<p><strong>User value.</strong> ${md(v.user_value_note)}</p>` : ''}</div></details>` : ''}
+    ${v.summary || v.user_value_note ? `<details class="more"><summary>${icon('chevron')}More detail</summary><div class="more-body">${v.summary ? `<p>${md(v.summary)}</p>` : ''}${v.user_value_note ? `<p><strong>User value.</strong> ${md(v.user_value_note)}</p>` : ''}</div></details>` : ''}
   </div>
   <div class="tiles">
-    ${tile('Scenarios tested', scenarios.length, `${kindCount('core')} core · ${kindCount('edge') + kindCount('counterexample')} edge · ${kindCount('alternate')} alt`, 'sky')}
-    ${tile('Failing or partial', failingList.length, failingList.length ? `in design or demo` : 'all pass or unverified', failingList.length ? 'peach' : 'mint')}
-    ${tile('Critical failing', critFail.length, critFail.length ? critFail.map((s) => esc(s.id)).join(' · ') : 'none', critFail.length ? 'peach' : 'mint')}
-    ${tile('Fix before build', byP.P1, `P1 · plus ${byP.P2} P2 · ${byP.P3} P3`, byP.P1 ? 'lemon' : 'mint')}
+    ${tile('Tests', scenarios.length, `${kindCount('core')} main · ${kindCount('edge') + kindCount('counterexample')} edge · ${kindCount('alternate')} other`, 'sky')}
+    ${tile('Not passing', failingList.length, failingList.length ? 'in design or demo' : 'none', failingList.length ? 'peach' : 'mint')}
+    ${tile('Critical failures', critFail.length, critFail.length ? critFail.map((s) => esc(s.id)).join(' · ') : 'none', critFail.length ? 'peach' : 'mint')}
+    ${tile('Fix before build', byP.P1, `then ${byP.P2} before release · ${byP.P3} later`, byP.P1 ? 'lemon' : 'mint')}
   </div>
-  <div class="two">
-    <div class="card bars">${barRow(dC, 'Design spec')}${barRow(xC, 'Demo behavior')}</div>
-    <div class="card">
-      <div class="map-h"><h3>Every scenario at a glance</h3><span>left = design · right = demo</span></div>
-      <div class="map">${scenarios.map(cell).join('')}</div>
-      <div class="map-key"><span>${icon('check')} pass · ${icon('half')} partial · ${icon('x')} fail · ? unknown</span><span><b class="crit" style="color:var(--fail-m)">!</b> critical</span></div>
-    </div>
+  <div class="card glance">
+    <div class="map-h"><h3>Every test</h3><span>Design ${dC.pass}/${scenarios.length} pass · Demo ${xC.pass}/${scenarios.length} pass · left: design, right: demo</span></div>
+    <div class="map">${scenarios.map(cell).join('')}</div>
+    <div class="map-key"><span>${icon('check')} pass · ${icon('half')} partial · ${icon('x')} fail · ? unknown</span><span><b class="crit" style="color:var(--fail-m)">!</b> critical</span></div>
   </div>
 </section>`;
 
@@ -295,7 +290,7 @@ function claudePrompt(f) {
     .filter((x, _, all) => !all.some((y) => y !== x && y.startsWith(`${x} (`)))
     .slice(0, 6);
   const L = [];
-  L.push(`Design QA finding ${f.id} (${f.priority} · ${PRIORITY_LABEL[f.priority] || ''}) — ${plain(m.feature)}${m.surface ? `, ${plain(m.surface)}` : ''}${(m.roles || []).length ? `, for ${m.roles.map(plain).join(' / ')}` : ''}.`);
+  L.push(`Design QA problem ${f.id} (${f.priority} · ${PRIORITY_LABEL[f.priority] || ''}) — ${plain(m.feature)}${m.surface ? `, ${plain(m.surface)}` : ''}${(m.roles || []).length ? `, for ${m.roles.map(plain).join(' / ')}` : ''}.`);
   L.push('', `Problem: ${plain(f.title)}`);
   if (f.expected) L.push(`Expected: ${plain(f.expected)}`);
   if (f.actual) L.push(`Actual: ${plain(f.actual)}`);
@@ -324,40 +319,41 @@ const findingCard = (f) => {
   const lead = imgs[0] || vis[0];
   const rest = vis.filter((x) => x !== lead).slice(0, 3);
   const opts = (f.action?.options || []).length ? `<div class="opts">${f.action.options.map((o) => { const [k, t] = splitOpt(o.label); return `<div class="opt"><div class="ol"><span>${esc(k)}</span>${md(t)}</div>${o.tradeoff ? `<p>${md(o.tradeoff)}</p>` : ''}</div>`; }).join('')}</div>` : '';
-  const more = [f.why && `<p><strong>Why it matters.</strong> ${md(f.why)}</p>`, f.retest && `<p><strong>Retest.</strong> ${md(f.retest)}</p>`].filter(Boolean).join('');
+  const more = [f.why && `<p><strong>Why.</strong> ${md(f.why)}</p>`, f.retest && `<p><strong>Retest.</strong> ${md(f.retest)}</p>`].filter(Boolean).join('');
   return `
   <article class="finding${lead ? '' : ' no-vis'}" id="${esc(f.id)}">
     <div>
-      <div class="f-head"><span class="prio p-${esc(f.priority)}">${esc(f.priority)}</span><h3><span class="fid">${esc(f.id)}</span>${md(f.title)}</h3><button class="copy-cc" type="button" data-copy="cc-${esc(f.id)}" title="Copy this issue as a prompt for Claude Code">${icon('copy')}<span>Copy for Claude Code</span></button></div>
+      <div class="f-head"><span class="prio p-${esc(f.priority)}">${esc(f.priority)}</span><h3><span class="fid">${esc(f.id)}</span>${md(f.title)}</h3><button class="copy-cc" type="button" data-copy="cc-${esc(f.id)}" title="Copy a prompt that fixes this problem">${icon('copy')}<span>Copy prompt</span></button></div>
       <textarea class="cc-prompt" id="cc-${esc(f.id)}" hidden readonly aria-hidden="true">${esc(claudePrompt(f))}</textarea>
-      <div class="f-meta">${esc(PRIORITY_LABEL[f.priority] || '')}${f.category ? ` · ${esc(CATEGORIES[f.category] || f.category)}` : ''}${f.confidence ? ` · ${esc(CONFIDENCE[f.confidence] || f.confidence)}` : ''} ${idLinks(f.scenarios)}</div>
+      <div class="f-meta">${esc(PRIORITY_LABEL[f.priority] || '')}${f.category ? ` · ${esc(CATEGORIES[f.category] || f.category)}` : ''}${f.confidence ? ` · ${esc(CONFIDENCE[f.confidence] || f.confidence)}` : ''}${ownerOf[f.id] ? ` · ${esc(owners[ownerOf[f.id]] || ownerOf[f.id])}` : ''} ${idLinks(f.scenarios)}</div>
       <div class="ea">
         <div><div class="eh"><span class="mk r-pass">${icon('check')}</span>Should</div>${md(f.expected)}</div>
         <div><div class="eh"><span class="mk r-fail">${icon('x')}</span>Does</div>${md(f.actual)}</div>
       </div>
       <div class="do"><b>${esc(ACTIONS[f.action?.type] || 'Do')}</b><span>${md(f.action?.recommendation)}</span></div>
       ${opts}
-      ${more ? `<details class="more"><summary>${icon('chevron')}Why it matters &amp; retest</summary><div class="more-body">${more}</div></details>` : ''}
+      ${more ? `<details class="more"><summary>${icon('chevron')}Why it matters · how to retest</summary><div class="more-body">${more}</div></details>` : ''}
     </div>
     ${lead ? `<div class="f-vis">${visual(lead, f.id)}${rest.length ? `<div class="thumbs">${rest.map((x) => visual(x, f.id, { legend: false })).join('')}</div>` : ''}</div>` : ''}
   </article>`;
 };
 const failed = `
 <section id="failed">
-  <div class="sec-h"><h2>What failed</h2><span>${plural(findings.length, 'finding')} · ${byP.P1} P1 · ${byP.P2} P2 · ${byP.P3} P3</span></div>
-  ${findings.length ? sortedFindings.map(findingCard).join('') : `<div class="empty good">${icon('check')}Nothing failed in this run.</div>`}
+  <div class="sec-h"><h2>Problems</h2><span>${plural(findings.length, 'problem')} · most urgent first</span></div>
+  ${findings.length ? sortedFindings.map(findingCard).join('') : `<div class="empty good">${icon('check')}No problems found.</div>`}
 </section>`;
 
 // ---------- next actions ----------
-const actions = `
+const actions = !nextActions.length ? '' : `
 <section id="actions">
-  <div class="sec-h"><h2>Next actions</h2><span>${plural(nextActions.length, 'action')}</span></div>
+  <div class="sec-h"><h2>Other to-dos</h2><span>not tied to one problem</span></div>
   ${nextActions.length ? `<div class="rows">${PRIORITIES.flatMap((p) => nextActions.filter((a) => a.priority === p)).concat(nextActions.filter((a) => !PRIORITIES.includes(a.priority))).map((a) => `<div class="row"><span class="prio p-${esc(a.priority)}">${esc(a.priority || '—')}</span><span>${md(a.action)}</span><span class="owner">${a.owner ? `<span class="tag">${esc(owners[a.owner] || a.owner)}</span>` : ''}${a.finding ? idLink(a.finding) : ''}</span></div>`).join('')}</div>` : '<p class="empty">None recorded.</p>'}
 </section>`;
 
 // ---------- scenarios ----------
 const scnRow = (s) => {
-  const tags = [esc(KIND_LABEL[s.kind] || s.kind), s.importance === 'critical' ? '<span class="crit">critical</span>' : esc(s.importance), s.lens && esc(s.lens), s.role && esc(s.role), s.change && `<span class="chg-${esc(s.change)}">${esc(s.change)}</span>`, s.assumption && 'assumed situation'].filter(Boolean).map((t) => `<span>${t}</span>`).join('');
+  // Only tags that tell the reader something: what kind, if critical, who, and what changed since last time.
+  const tags = [esc(KIND_LABEL[s.kind] || s.kind), s.importance === 'critical' && '<span class="crit">critical</span>', s.role && esc(s.role), ['new', 'fixed', 'regressed'].includes(s.change) && `<span class="chg-${esc(s.change)}">${esc(s.change)}</span>`, s.assumption && 'assumed'].filter(Boolean).map((t) => `<span>${t}</span>`).join('');
   const layer = (name, r) => `<div class="layer"><div class="lh">${name} ${pill(r?.result)}${r?.method ? `<small>${esc(METHODS[r.method] || r.method)}</small>` : ''}</div>${r?.note ? `<p>${md(r.note)}</p>` : ''}${r?.ref ? `<p class="ref"><code>${esc(r.ref)}</code></p>` : ''}</div>`;
   return `
   <details class="scn" id="${esc(s.id)}" data-kind="${esc(s.kind)}" data-imp="${esc(s.importance)}" data-failing="${failing(s)}">
@@ -375,23 +371,23 @@ const scnRow = (s) => {
         <div><span class="label">Passes if</span>${(s.success || []).length ? `<ul class="checks">${s.success.map((x) => `<li>${icon('todo')}<span>${md(x)}</span></li>`).join('')}</ul>` : ''}</div>
       </div>
       ${gallery(s.visuals, s.id)}
-      ${(s.findings || []).length || (s.evidence || []).length ? `<div class="s-foot">${(s.findings || []).length ? `Findings ${idLinks(s.findings)}` : ''}${(s.evidence || []).length ? ` · Evidence ${idLinks(s.evidence)}` : ''}${s.persona ? ` · ${esc(s.persona)}` : ''}</div>` : ''}
+      ${(s.findings || []).length || (s.evidence || []).length ? `<div class="s-foot">${(s.findings || []).length ? `Problems ${idLinks(s.findings)}` : ''}${(s.evidence || []).length ? ` · Sources ${idLinks(s.evidence)}` : ''}${s.persona ? ` · ${esc(s.persona)}` : ''}</div>` : ''}
     </div>
   </details>`;
 };
 const scenSection = `
 <section id="scenarios">
-  <div class="sec-h"><h2>Scenarios</h2><span>${dC.pass} design pass · ${xC.pass} demo pass · of ${scenarios.length}</span></div>
+  <div class="sec-h"><h2>Tests</h2><span>open one for steps and evidence</span></div>
   <div class="filters" role="group" aria-label="Filter scenarios">
     <button type="button" data-filter="all" aria-pressed="true">All <b>${scenarios.length}</b></button>
-    <button type="button" data-filter="failing" aria-pressed="false">Failing <b>${failingList.length}</b></button>
+    <button type="button" data-filter="failing" aria-pressed="false">Not passing <b>${failingList.length}</b></button>
     <button type="button" data-filter="critical" aria-pressed="false">Critical <b>${scenarios.filter((s) => s.importance === 'critical').length}</b></button>
     <button type="button" data-filter="edge" aria-pressed="false">Edge cases <b>${scenarios.filter((s) => s.kind === 'edge' || s.kind === 'counterexample').length}</b></button>
     <span class="sp"></span>
     <button type="button" class="linkbtn" data-expand>Expand all</button><button type="button" class="linkbtn" data-collapse>Collapse</button>
   </div>
   <div class="scn-list">
-    <div class="scn-cols" aria-hidden="true"><span>ID</span><span>Scenario</span><span>Design</span><span>Demo</span><span></span></div>
+    <div class="scn-cols" aria-hidden="true"><span>ID</span><span>Test</span><span>Design</span><span>Demo</span><span></span></div>
     ${scenarios.map(scnRow).join('')}
   </div>
 </section>`;
@@ -408,9 +404,9 @@ const covCard = (rowsIn, title) => {
 };
 const coverage = `
 <section id="coverage">
-  <div class="sec-h"><h2>Coverage</h2><span>gaps listed first</span></div>
-  <div class="cov-grid">${covCard(cov.requirements, 'Requirements & outcomes')}${covCard(cov.constraints, 'Constraint checklist')}</div>
-  ${(cov.untested || []).length ? `<div class="card untested"><span class="label">Not tested in this run</span><ul>${cov.untested.map((x) => `<li>${md(x)}</li>`).join('')}</ul></div>` : ''}
+  <div class="sec-h"><h2>What was checked</h2><span>gaps first</span></div>
+  <div class="cov-grid">${covCard(cov.requirements, 'Requirements')}${covCard(cov.constraints, 'Design rules')}</div>
+  ${(cov.untested || []).length ? `<div class="card untested"><span class="label">Not tested</span><ul>${cov.untested.map((x) => `<li>${md(x)}</li>`).join('')}</ul></div>` : ''}
 </section>`;
 
 // ---------- intent ----------
@@ -422,12 +418,12 @@ const chain = chainParts.length > 1
   : it.outcome_chain ? `<div class="card">${md(it.outcome_chain)}</div>` : '';
 const intent = `
 <section id="intent">
-  <div class="sec-h"><h2>Intent</h2><span>${esc(it.status || '')}</span></div>
+  <div class="sec-h"><h2>Goal</h2><span>${esc(it.status || '')}</span></div>
   ${chain}
-  ${it.problem || it.users || it.job ? `<div class="trio">${[['Problem', it.problem], ['Users', it.users], ['Job to be done', it.job]].filter(([, x]) => x).map(([l, x]) => `<div class="card"><span class="label">${l}</span>${md(x)}</div>`).join('')}</div>` : ''}
+  ${it.problem || it.users || it.job ? `<div class="trio">${[['Problem', it.problem], ['Who', it.users], ['They need to', it.job]].filter(([, x]) => x).map(([l, x]) => `<div class="card"><span class="label">${l}</span>${md(x)}</div>`).join('')}</div>` : ''}
   ${(it.success || []).length || (it.out_of_scope || []).length ? `<div class="duo">${(it.success || []).length ? `<div class="card"><span class="label">Success looks like</span><ul class="crit-list">${it.success.map((x) => `<li>${icon('todo')}<span>${md(x)}</span></li>`).join('')}</ul></div>` : ''}${(it.out_of_scope || []).length ? `<div class="card"><span class="label">Out of scope</span><ul class="crit-list">${it.out_of_scope.map((x) => `<li>${icon('x')}<span>${md(x)}</span></li>`).join('')}</ul></div>` : ''}</div>` : ''}
   <div class="src-line">Source: ${md(it.source)}${it.status === 'reconstructed' ? ' <span class="tag">reconstructed — [assumption]</span>' : ''}</div>
-  ${evidence.length ? `<details class="more"><summary>${icon('chevron')}Evidence register (${evidence.length})</summary>
+  ${evidence.length ? `<details class="more"><summary>${icon('chevron')}Sources (${evidence.length})</summary>
   <div class="tablewrap"><table><thead><tr><th>ID</th><th>Type</th><th>Claim</th><th>Source</th><th>Limits</th></tr></thead><tbody>
   ${evidence.map((e) => `<tr id="${esc(e.id)}"><td><span class="idlink">${esc(e.id)}</span></td><td><span class="tag">${esc(e.type)}</span></td><td>${md(e.claim)}</td><td><code>${esc(e.source)}</code>${e.date ? `<div class="muted">${esc(e.date)}</div>` : ''}</td><td class="muted">${md(e.limits)}</td></tr>`).join('')}
   </tbody></table></div></details>` : ''}
@@ -437,20 +433,20 @@ const intent = `
 const open = `
 <section id="open">
   <div class="sec-h"><h2>Open questions</h2><span>${plural(openQs.length, 'question')}</span></div>
-  ${openQs.length ? `<div class="qs">${openQs.map((q) => `<div class="q"><p class="qq">${md(String(q.question || '').replace(/^\*\*\[open\]\*\*\s*/i, ''))}</p><dl>${q.resolves ? `<div><dt>Who settles</dt><dd>${md(q.resolves)}</dd></div>` : ''}${q.next ? `<div><dt>Next</dt><dd>${md(q.next)}</dd></div>` : ''}</dl>${idLinks(q.scenarios)}</div>`).join('')}</div>` : '<p class="empty">None recorded.</p>'}
+  ${openQs.length ? `<div class="qs">${openQs.map((q) => `<div class="q"><p class="qq">${md(String(q.question || '').replace(/^\*\*\[open\]\*\*\s*/i, ''))}</p><dl>${q.resolves ? `<div><dt>Who decides</dt><dd>${md(q.resolves)}</dd></div>` : ''}${q.next ? `<div><dt>Next</dt><dd>${md(q.next)}</dd></div>` : ''}</dl>${idLinks(q.scenarios)}</div>`).join('')}</div>` : '<p class="empty">None recorded.</p>'}
 </section>`;
 
 // ---------- run details ----------
 const run = `
 <section id="run" class="run">
-  <div class="sec-h"><h2>Run details</h2><span>${esc(m.author || 'Design QA')}</span></div>
+  <div class="sec-h"><h2>About this test</h2><span>${esc(m.author || 'Design QA')}</span></div>
   <div class="card"><dl>
     ${m.boundary ? `<div><dt>Scope</dt><dd>${md(m.boundary)}</dd></div>` : ''}
     ${(m.reviewed || []).length ? `<div><dt>Reviewed</dt><dd><ul>${m.reviewed.map((r) => `<li>${md(r.label)}${r.ref ? ` — <code>${esc(r.ref)}</code>` : ''}${r.note ? ` <span class="muted">(${md(r.note)})</span>` : ''}</li>`).join('')}</ul></dd></div>` : ''}
     ${m.demo ? `<div><dt>Demo</dt><dd>${md([m.demo.url, m.demo.build, m.demo.method].filter(Boolean).join(' · '))}</dd></div>` : ''}
     ${m.previous_run ? `<div><dt>Previous run</dt><dd><code>${esc(m.previous_run)}</code></dd></div>` : ''}
   </dl></div>
-  <p class="disclaimer">${icon('info')}<span>Generated ${new Date().toISOString().slice(0, 10)} from results.json. A design evaluation — not proof of production readiness, adoption or real-user comprehension.</span></p>
+  <p class="disclaimer">${icon('info')}<span>Generated ${new Date().toISOString().slice(0, 10)}. A design check — not proof that it is ready to ship or that users will understand it.</span></p>
 </section>
 <dialog class="lightbox" aria-label="Enlarged screenshot"><button type="button" class="close" aria-label="Close">×</button><div class="lb-body"></div></dialog>`;
 
@@ -497,7 +493,7 @@ if (!args.includes('--no-index')) {
   let qaRoot = runDir;
   while (qaRoot !== path.dirname(qaRoot) && path.basename(qaRoot) !== 'qa-tests') qaRoot = path.dirname(qaRoot);
   if (path.basename(qaRoot) === 'qa-tests') writeIndex(qaRoot);
-  else warnings.push('results.json is not under a qa-tests/ folder — index not rebuilt');
+  // Repos whose profile saves the latest report in each feature folder have no run index.
 }
 
 function writeIndex(root) {
